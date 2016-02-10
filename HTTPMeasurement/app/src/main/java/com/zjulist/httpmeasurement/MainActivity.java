@@ -3,7 +3,8 @@ package com.zjulist.httpmeasurement;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.v7.app.AppCompatActivity;
+//import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -26,7 +27,8 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-public class MainActivity extends AppCompatActivity {
+//public class MainActivity extends AppCompatActivity {
+public class MainActivity extends ActionBarActivity {
 
     Button button1,button2,button3,button4,button5;
     ListView urlList;
@@ -58,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
         okHttpClient = new OkHttpClient(this);
 
 
-
+        OkHttpClient.initializeNetProphet(getApplicationContext());
 
         myAdapter = new UrlListAdapter(this,srcDataList);
         asynTaskManager = AsynTaskManager.getInstance();
