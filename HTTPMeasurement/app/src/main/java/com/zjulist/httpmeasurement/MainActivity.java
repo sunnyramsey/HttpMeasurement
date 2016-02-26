@@ -57,10 +57,11 @@ public class MainActivity extends ActionBarActivity {
         urlList = (ListView)findViewById(R.id.listView);
         infoText = (TextView)findViewById(R.id.textView);
         countText = (EditText)findViewById(R.id.editText);
-        okHttpClient = new OkHttpClient(this);
+
 
 
         OkHttpClient.initializeNetProphet(getApplicationContext());
+        okHttpClient = new OkHttpClient();
 
         myAdapter = new UrlListAdapter(this,srcDataList);
         asynTaskManager = AsynTaskManager.getInstance();
@@ -169,6 +170,7 @@ public class MainActivity extends ActionBarActivity {
                 {
                     srcDataList.clear();
                     srcUrlResponse = response.body().string();
+
                     parseUrlList(srcUrlResponse);
                     successUrl = 0;
                     failedUrl = 0;
@@ -309,7 +311,7 @@ public class MainActivity extends ActionBarActivity {
                     if(response.isSuccessful()){
                         Log.i("Request-Info", url + " is successful");
                         successUrl++;
-                        response.body().string();
+                        String content = response.body().string();
                         response.body().close();
                         runOnUiThread(new Runnable() {
                             @Override
@@ -319,7 +321,7 @@ public class MainActivity extends ActionBarActivity {
                             }
                         });
 //                        System.out.println(response.code());
-//                        System.out.println(response.body().string());
+                        System.out.println(url+":"+content.length());
                     }else{
                         Log.e("Request-Info-R",url+" is failed");
                         failedUrl++;
