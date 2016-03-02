@@ -3,8 +3,7 @@ package com.zjulist.httpmeasurement;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-//import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -27,10 +26,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
-//public class MainActivity extends AppCompatActivity {
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends AppCompatActivity {
 
-    Button button1,button2,button3,button4,button5;
+    Button button1,button2,button3,button4,button5,button6;
     ListView urlList;
     TextView infoText;
     EditText countText;
@@ -54,14 +52,16 @@ public class MainActivity extends ActionBarActivity {
         button3 = (Button)findViewById(R.id.button3);
         button4 = (Button)findViewById(R.id.button4);
         button5 = (Button)findViewById(R.id.button5);
+        button6 = (Button)findViewById(R.id.button6);
         urlList = (ListView)findViewById(R.id.listView);
         infoText = (TextView)findViewById(R.id.textView);
         countText = (EditText)findViewById(R.id.editText);
 
-
-
         OkHttpClient.initializeNetProphet(getApplicationContext());
         okHttpClient = new OkHttpClient();
+
+
+
 
         myAdapter = new UrlListAdapter(this,srcDataList);
         asynTaskManager = AsynTaskManager.getInstance();
@@ -71,6 +71,7 @@ public class MainActivity extends ActionBarActivity {
         button1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //Get global website urls from server
                 try {
                     if (!countText.getText().equals(""))
                         defaultTotalNumber = Integer.parseInt(countText.getText().toString());
@@ -91,6 +92,7 @@ public class MainActivity extends ActionBarActivity {
         button2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //Start measurement asynchronous
                 successUrl = 0;
                 failedUrl = 0;
                 refreshInfo();
@@ -107,6 +109,7 @@ public class MainActivity extends ActionBarActivity {
         button3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                // Copy database to SD card
                 try {
                     writeToSD();
                 } catch (IOException e) {
@@ -119,6 +122,7 @@ public class MainActivity extends ActionBarActivity {
         button4.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                    //Get Chinese website urls from server
                     try {
                         if (!countText.getText().equals(""))
                             defaultTotalNumber = Integer.parseInt(countText.getText().toString());
@@ -135,6 +139,7 @@ public class MainActivity extends ActionBarActivity {
         button5.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //Check result
                 refreshInfo();
                 String toastString  ="";
                 for(int i =0 ;i<srcDataList.size();i++)
@@ -143,6 +148,18 @@ public class MainActivity extends ActionBarActivity {
                         toastString +=srcDataList.get(i).getUrl()+";";
                 }
                 Toast.makeText(getApplicationContext(),toastString,Toast.LENGTH_LONG).show();
+            }
+        });
+
+        button6.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //Start measurement synchronous
+                successUrl = 0;
+                failedUrl = 0;
+                refreshInfo();
+                Thread thread = new Thread(new SyncHttpTask());
+                thread.start();
             }
         });
     }
@@ -170,7 +187,6 @@ public class MainActivity extends ActionBarActivity {
                 {
                     srcDataList.clear();
                     srcUrlResponse = response.body().string();
-
                     parseUrlList(srcUrlResponse);
                     successUrl = 0;
                     failedUrl = 0;
@@ -311,7 +327,7 @@ public class MainActivity extends ActionBarActivity {
                     if(response.isSuccessful()){
                         Log.i("Request-Info", url + " is successful");
                         successUrl++;
-                        String content = response.body().string();
+                        response.body().string();
                         response.body().close();
                         runOnUiThread(new Runnable() {
                             @Override
@@ -321,7 +337,7 @@ public class MainActivity extends ActionBarActivity {
                             }
                         });
 //                        System.out.println(response.code());
-                        System.out.println(url+":"+content.length());
+//                        System.out.println(response.body().string());
                     }else{
                         Log.e("Request-Info-R",url+" is failed");
                         failedUrl++;
@@ -355,6 +371,70 @@ public class MainActivity extends ActionBarActivity {
     {
         srcDataList.get(number).setIsFinished(state);
         myAdapter.notifyDataSetChanged();
+    }
+
+
+    private class SyncHttpTask implements Runnable{
+
+
+        @Override
+        public void run() {
+            successUrl = 0;
+            failedUrl = 0;
+
+            for(int i=0;i<srcDataList.size();i++)
+            {
+                boolean isfailed = false;
+                final int num = i;
+                String url = srcDataList.get(i).getUrl();
+                Request request = new Request.Builder()
+                        .url(srcDataList.get(i).getUrl())
+                        .build();
+                Response response = null;
+                try {
+                    response = okHttpClient.newCall(request).execute();
+                    if(response.isSuccessful()){
+                        Log.i("Request-Info", url + " is successful");
+                        response.body().string();
+                        response.body().close();
+                    }else
+                    {
+                        Log.e("Request-Info-R",url+" is failed");
+                        isfailed = true;
+                        response.body().string();
+                        response.body().close();
+                    }
+                } catch (IOException e) {
+                    isfailed = true;
+                    Log.e("Request-Info", url + " is failed");
+                    e.printStackTrace();
+                }finally {
+                    if(isfailed == true)
+                    {
+                        failedUrl++;
+                    }else{
+                        successUrl++;
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            refreshInfo();
+                            refreshData(num, true);
+                        }
+                    });
+                }
+
+            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(), "All finished!", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+
+        }
+
     }
 
 }
